@@ -14,26 +14,12 @@ import config
 # 5 = Pink
 
 GRAPH_COLORS = [
-    "#000000",  # 1. Black
-    "#D50000",  # 2. Red
-    "#1565C0",  # 3. Blue
-    "#00A152",  # 4. Green
-    "#E91E63",  # 5. Pink
+    "#000000",
+    "#D50000",
+    "#1565C0",
+    "#00A152",
+    "#E91E63",
 ]
-
-
-# ============================================================
-# SESSION STATE INITIALIZATION
-# ============================================================
-# Use dictionary-style access instead of attribute-style access.
-# This is more robust on Streamlit Cloud and prevents
-# AttributeError when the state does not exist yet.
-
-if "rx_timeline_color_registry" not in st.session_state:
-    st.session_state["rx_timeline_color_registry"] = {}
-
-if "rx_timeline_color_index" not in st.session_state:
-    st.session_state["rx_timeline_color_index"] = 0
 
 
 # ============================================================
@@ -42,9 +28,9 @@ if "rx_timeline_color_index" not in st.session_state:
 
 def _get_timeline_color(key: str) -> str:
     """
-    Give each non-3D timeline graph one fixed color.
+    Assign one fixed color to each timeline graph.
 
-    The first five unique timeline graphs receive:
+    First five graphs:
     1. Black
     2. Red
     3. Blue
@@ -56,18 +42,31 @@ def _get_timeline_color(key: str) -> str:
 
     key = str(key)
 
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # Initialize session state INSIDE the function.
+    # This prevents KeyError on Streamlit Cloud.
+    # --------------------------------------------------------
+
+    if "rx_timeline_color_registry" not in st.session_state:
+        st.session_state["rx_timeline_color_registry"] = {}
+
+    if "rx_timeline_color_index" not in st.session_state:
+        st.session_state["rx_timeline_color_index"] = 0
+
     registry = st.session_state["rx_timeline_color_registry"]
     color_index = st.session_state["rx_timeline_color_index"]
 
-    # If this graph does not yet have a color,
-    # assign the next color in the palette.
+    # Assign a color only the first time this graph appears
     if key not in registry:
 
         color = GRAPH_COLORS[color_index % len(GRAPH_COLORS)]
 
         registry[key] = color
 
-        st.session_state["rx_timeline_color_index"] = color_index + 1
+        st.session_state["rx_timeline_color_index"] = (
+            color_index + 1
+        )
 
     return registry[key]
 
@@ -84,10 +83,10 @@ def timeline_chart(
     selection_message: str
 ):
     """
-    Create one interactive timeline bar chart.
+    Create an interactive timeline bar chart.
 
-    The first five non-3D timeline charts receive fixed colors:
-    black, red, blue, green, pink.
+    The first five non-3D graphs receive:
+    Black → Red → Blue → Green → Pink
     """
 
     graph_color = _get_timeline_color(key)
@@ -104,9 +103,9 @@ def timeline_chart(
         custom_data=["Period"],
     )
 
-    # ========================================================
+    # --------------------------------------------------------
     # COLOR ONLY THE NON-3D TIMELINE GRAPHS
-    # ========================================================
+    # --------------------------------------------------------
 
     fig.update_traces(
         marker=dict(
@@ -125,7 +124,7 @@ def timeline_chart(
             l=20,
             r=20,
             t=70,
-            b=60
+            b=60,
         ),
     )
 
@@ -146,21 +145,30 @@ def timeline_chart(
 
 def render_metric_squares(data_list: list):
     """
-    Render compact square metric cards with large bold numbers.
+    Render compact square metric cards
+    with large bold numbers.
     """
 
     cards = "".join(
         f'<div class="metric-square">'
-        f'<div class="metric-square-title">{item["title"]}</div>'
-        f'<div class="metric-square-val">{item["value"]}</div>'
-        f'<div class="metric-square-sub">{item["sub"]}</div>'
+        f'<div class="metric-square-title">'
+        f'{item["title"]}'
+        f'</div>'
+        f'<div class="metric-square-val">'
+        f'{item["value"]}'
+        f'</div>'
+        f'<div class="metric-square-sub">'
+        f'{item["sub"]}'
+        f'</div>'
         f'</div>'
         for item in data_list
     )
 
     st.markdown(
-        f'<div class="metric-square-container">{cards}</div>',
-        unsafe_allow_html=True
+        f'<div class="metric-square-container">'
+        f'{cards}'
+        f'</div>',
+        unsafe_allow_html=True,
     )
 
 
@@ -168,22 +176,24 @@ def render_metric_squares(data_list: list):
 # 3D BALLOON MATRIX
 # ============================================================
 # IMPORTANT:
-# This section is intentionally kept as it was.
-# The 3D colors and balloon design are NOT controlled by
-# GRAPH_COLORS and are NOT affected by the timeline colors.
+# DO NOT CHANGE THIS SECTION.
+# The 3D graph keeps its original colors and balloon size.
+# GRAPH_COLORS above does NOT affect the 3D graph.
+# ============================================================
 
 def render_3d_matrix(
     df_3d_agg,
     top10_fx: list,
     search_drug: str
 ):
+
     fig_3d = go.Figure()
 
     colors = [
         "#1f77b4",
         "#ff7f0e",
         "#2ca02c",
-        "#d62728"
+        "#d62728",
     ]
 
     UNIFORM_BALLOON_SIZE = 8
@@ -211,7 +221,7 @@ def render_3d_matrix(
                     opacity=0.92,
                     line=dict(
                         width=1.5,
-                        color="rgba(0,0,0,0.7)"
+                        color="rgba(0,0,0,0.7)",
                     ),
                 ),
 
@@ -263,7 +273,7 @@ def render_3d_matrix(
             l=0,
             r=0,
             b=0,
-            t=50
+            t=50,
         ),
 
         legend=dict(
@@ -271,12 +281,12 @@ def render_3d_matrix(
             yanchor="top",
             y=0.99,
             xanchor="left",
-            x=0.01
+            x=0.01,
         ),
     )
 
     st.plotly_chart(
         fig_3d,
         width="stretch",
-        key="balloon_3d_final"
+        key="balloon_3d_final",
     )
