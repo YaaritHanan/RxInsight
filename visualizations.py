@@ -3,10 +3,16 @@ import plotly.graph_objects as go
 import streamlit as st
 import config
 
-# Fixed colors for the first five non-3D graphs:
-# 1 = black, 2 = red, 3 = blue, 4 = green, 5 = pink.
-# The mapping is stored in session_state so reruns/interactions do not
-# cause the colors to change.
+
+# ============================================================
+# FIXED COLORS FOR THE FIRST FIVE NON-3D GRAPHS
+# ============================================================
+# 1 = Black
+# 2 = Red
+# 3 = Blue
+# 4 = Green
+# 5 = Pink
+
 GRAPH_COLORS = [
     "#000000",  # 1. Black
     "#D50000",  # 2. Red
@@ -15,41 +21,93 @@ GRAPH_COLORS = [
     "#E91E63",  # 5. Pink
 ]
 
+
+# ============================================================
+# SESSION STATE INITIALIZATION
+# ============================================================
+# Use dictionary-style access instead of attribute-style access.
+# This is more robust on Streamlit Cloud and prevents
+# AttributeError when the state does not exist yet.
+
 if "rx_timeline_color_registry" not in st.session_state:
-    st.session_state.rx_timeline_color_registry = {}
+    st.session_state["rx_timeline_color_registry"] = {}
 
 if "rx_timeline_color_index" not in st.session_state:
-    st.session_state.rx_timeline_color_index = 0
+    st.session_state["rx_timeline_color_index"] = 0
 
+
+# ============================================================
+# TIMELINE COLOR HELPER
+# ============================================================
 
 def _get_timeline_color(key: str) -> str:
-    """Give each non-3D timeline graph one fixed color in order of creation."""
+    """
+    Give each non-3D timeline graph one fixed color.
+
+    The first five unique timeline graphs receive:
+    1. Black
+    2. Red
+    3. Blue
+    4. Green
+    5. Pink
+
+    The color remains stable during Streamlit reruns.
+    """
+
     key = str(key)
 
-    if key not in st.session_state.rx_timeline_color_registry:
-        index = st.session_state.rx_timeline_color_index
+    registry = st.session_state["rx_timeline_color_registry"]
+    color_index = st.session_state["rx_timeline_color_index"]
 
-        # The first five are exactly black, red, blue, green, pink.
-        # After that, additional graphs cycle through the same palette.
-        color = GRAPH_COLORS[index % len(GRAPH_COLORS)]
+    # If this graph does not yet have a color,
+    # assign the next color in the palette.
+    if key not in registry:
 
-        st.session_state.rx_timeline_color_registry[key] = color
-        st.session_state.rx_timeline_color_index += 1
+        color = GRAPH_COLORS[color_index % len(GRAPH_COLORS)]
 
-    return st.session_state.rx_timeline_color_registry[key]
+        registry[key] = color
+
+        st.session_state["rx_timeline_color_index"] = color_index + 1
+
+    return registry[key]
 
 
-def timeline_chart(df, title: str, key: str, granularity: str, selection_message: str):
+# ============================================================
+# TIMELINE CHART
+# ============================================================
+
+def timeline_chart(
+    df,
+    title: str,
+    key: str,
+    granularity: str,
+    selection_message: str
+):
+    """
+    Create one interactive timeline bar chart.
+
+    The first five non-3D timeline charts receive fixed colors:
+    black, red, blue, green, pink.
+    """
+
     graph_color = _get_timeline_color(key)
 
     fig = px.bar(
-        df, x="Period", y="Reports",
+        df,
+        x="Period",
+        y="Reports",
         title=title,
-        labels={"Period": granularity, "Reports": "Number of Reports"},
+        labels={
+            "Period": granularity,
+            "Reports": "Number of Reports"
+        },
         custom_data=["Period"],
     )
 
-    # ONLY the non-3D graphs are colored here.
+    # ========================================================
+    # COLOR ONLY THE NON-3D TIMELINE GRAPHS
+    # ========================================================
+
     fig.update_traces(
         marker=dict(
             color=graph_color,
@@ -63,7 +121,12 @@ def timeline_chart(df, title: str, key: str, granularity: str, selection_message
     fig.update_layout(
         height=500,
         hovermode="x unified",
-        margin=dict(l=20, r=20, t=70, b=60),
+        margin=dict(
+            l=20,
+            r=20,
+            t=70,
+            b=60
+        ),
     )
 
     st.info(selection_message)
@@ -77,11 +140,15 @@ def timeline_chart(df, title: str, key: str, granularity: str, selection_message
     )
 
 
+# ============================================================
+# METRIC SQUARES
+# ============================================================
+
 def render_metric_squares(data_list: list):
     """
-    Renders compact square metric cards with large bold numbers.
-    Zero-indentation ensures markdown parsers never format cards as code blocks.
+    Render compact square metric cards with large bold numbers.
     """
+
     cards = "".join(
         f'<div class="metric-square">'
         f'<div class="metric-square-title">{item["title"]}</div>'
@@ -90,16 +157,43 @@ def render_metric_squares(data_list: list):
         f'</div>'
         for item in data_list
     )
-    st.markdown(f'<div class="metric-square-container">{cards}</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        f'<div class="metric-square-container">{cards}</div>',
+        unsafe_allow_html=True
+    )
 
 
-def render_3d_matrix(df_3d_agg, top10_fx: list, search_drug: str):
+# ============================================================
+# 3D BALLOON MATRIX
+# ============================================================
+# IMPORTANT:
+# This section is intentionally kept as it was.
+# The 3D colors and balloon design are NOT controlled by
+# GRAPH_COLORS and are NOT affected by the timeline colors.
+
+def render_3d_matrix(
+    df_3d_agg,
+    top10_fx: list,
+    search_drug: str
+):
     fig_3d = go.Figure()
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"]
+
+    colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728"
+    ]
+
     UNIFORM_BALLOON_SIZE = 8
 
     for idx, cat in enumerate(config.POLY_ORDER):
-        c_df = df_3d_agg[df_3d_agg["Polypharmacy Category"] == cat]
+
+        c_df = df_3d_agg[
+            df_3d_agg["Polypharmacy Category"] == cat
+        ]
+
         if c_df.empty:
             continue
 
@@ -110,13 +204,21 @@ def render_3d_matrix(df_3d_agg, top10_fx: list, search_drug: str):
                 z=c_df["Death Percentage (%)"],
                 mode="markers",
                 name=cat,
+
                 marker=dict(
                     size=UNIFORM_BALLOON_SIZE,
                     color=colors[idx % len(colors)],
                     opacity=0.92,
-                    line=dict(width=1.5, color="rgba(0,0,0,0.7)"),
+                    line=dict(
+                        width=1.5,
+                        color="rgba(0,0,0,0.7)"
+                    ),
                 ),
-                customdata=c_df[["Reports", "Death"]],
+
+                customdata=c_df[
+                    ["Reports", "Death"]
+                ],
+
                 hovertemplate=(
                     "<b>Tier:</b> %{x}<br>"
                     "<b>Effect:</b> %{y}<br>"
@@ -129,12 +231,20 @@ def render_3d_matrix(df_3d_agg, top10_fx: list, search_drug: str):
         )
 
     fig_3d.update_layout(
-        title=f"3D Multidimensional Polypharmacy & Fatality Matrix: {search_drug}",
+        title=(
+            f"3D Multidimensional Polypharmacy "
+            f"& Fatality Matrix: {search_drug}"
+        ),
+
         scene=dict(
             xaxis_title="Pharmacy Group",
             yaxis_title="Top 10 Adverse Effects",
             zaxis_title="Death %",
-            xaxis=dict(type="category"),
+
+            xaxis=dict(
+                type="category"
+            ),
+
             yaxis=dict(
                 type="category",
                 categoryorder="array",
@@ -146,8 +256,27 @@ def render_3d_matrix(df_3d_agg, top10_fx: list, search_drug: str):
                 tickfont=dict(size=10),
             ),
         ),
+
         height=750,
-        margin=dict(l=0, r=0, b=0, t=50),
-        legend=dict(title="<b>Pharmacy Tiers</b>", yanchor="top", y=0.99, xanchor="left", x=0.01),
+
+        margin=dict(
+            l=0,
+            r=0,
+            b=0,
+            t=50
+        ),
+
+        legend=dict(
+            title="<b>Pharmacy Tiers</b>",
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        ),
     )
-    st.plotly_chart(fig_3d, width="stretch", key="balloon_3d_final")
+
+    st.plotly_chart(
+        fig_3d,
+        width="stretch",
+        key="balloon_3d_final"
+    )
