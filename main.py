@@ -20,6 +20,8 @@ from visualizations import timeline_chart, render_metric_squares, render_3d_matr
 # Initialize Custom CSS Styling
 apply_ui_styling()
 
+st.caption("Disclaimer: For informational and educational purposes only. RxInsight does not provide medical advice, diagnosis, or treatment recommendations. Adverse event data are based on reported cases and do not establish causality.")
+
 st.title("RxInsight: Pharmacovigilance & Drug Safety ℞☤💊")
 
 if config.OPENFDA_API_KEY:
