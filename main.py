@@ -82,7 +82,10 @@ if general_timeline is not None and not general_timeline.empty:
 # ------------------------------------------------------------
 st.markdown("## Enter drug name (Brand or Generic):")
 medicinalproduct = st.text_input(
-    "", value="", placeholder="e.g. aspirin, ibuprofen, Eliquis", label_visibility="collapsed"
+    "Drug name",
+    value="",
+    placeholder="e.g. aspirin, ibuprofen, Eliquis",
+    label_visibility="collapsed",
 ).strip()
 search_drug = medicinalproduct.upper() if medicinalproduct else ""
 
@@ -344,6 +347,3 @@ if medicinalproduct:
             st.warning("Insufficient parsed records matching polypharmacy criteria to render 3D balloons.")
 
 
-            ##   py -m streamlit run main.py
-            # -
-            # Terminal
