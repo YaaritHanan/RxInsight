@@ -94,7 +94,14 @@ def _slim_patient_report(r: dict) -> dict:
     return {
         "safetyreportid": r.get("safetyreportid"),
         "receivedate": r.get("receivedate"),
-        "seriousnessdeath": r.get("seriousnessdeath"),
+        # Keep every seriousness field defined in config.SERIOUSNESS_FIELD_MAP.
+        # The previous optimization kept only seriousnessdeath, which caused
+        # the Seriousness Groups section to show death but zeros for the other
+        # categories.
+        **{
+            field_name: r.get(field_name)
+            for field_name, _label in getattr(config, "SERIOUSNESS_FIELD_MAP", {}).values()
+        },
         "patient": {
             "patientonsetage": p.get("patientonsetage"),
             "patientonsetageunit": p.get("patientonsetageunit"),
