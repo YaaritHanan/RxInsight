@@ -26,8 +26,8 @@ The application uses data from the FDA Adverse Event Reporting System (FAERS) th
 
 ## Installation
 ##In terminal:
-streamlit run main.py
-
+`streamlit run main.py
+`
 
 ## Target Audience
 
