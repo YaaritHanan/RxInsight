@@ -25,10 +25,9 @@ The application uses data from the FDA Adverse Event Reporting System (FAERS) th
 * Poetry
 
 ## Installation
+##In terminal:
+streamlit run main.py
 
-```bash
-poetry install
-```
 
 ## Target Audience
 
@@ -41,3 +40,5 @@ The application is **not intended for healthcare professionals or clinical decis
 RxInsight is intended for informational and educational purposes only.
 
 The information presented by the application should not be considered medical advice, diagnosis, treatment, or a substitute for consultation with a qualified healthcare professional.
+
+##Link: https://rxinsight.streamlit.app/
