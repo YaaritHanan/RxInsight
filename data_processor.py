@@ -244,13 +244,25 @@ def compute_cumulative_75(adverse_effects_df: pd.DataFrame):
 
 
 def prepare_3d_matrix(raw_reports: list):
-    """Extracts polypharmacy categories and the top 10 adverse reactions across
-    the cohort, aggregating report volumes and cross-sectional mortality rates."""
-    rows_3d = []
+    """Build the 3D matrix directly from aggregated counters.
+
+    The previous implementation created one Python dictionary row for every
+    reaction in every report and only then converted it to a DataFrame. With
+    large cohorts this creates a very large temporary object.
+
+    This version aggregates counts during the single pass over the reports and
+    materializes only the final polypharmacy x top-10-effect matrix.
+    """
+    from collections import Counter, defaultdict
+
+    effect_totals = Counter()
+    cell_counts = defaultdict(lambda: [0, 0])  # reports, deaths
+
     for r in raw_reports:
         p = r.get("patient", {}) or {}
         drugs = p.get("drug", []) or []
         reactions = p.get("reaction", []) or []
+
         if not isinstance(drugs, list):
             drugs = [drugs] if drugs else []
         if not isinstance(reactions, list):
@@ -261,37 +273,51 @@ def prepare_3d_matrix(raw_reports: list):
             continue
 
         is_d = int(str(r.get("seriousnessdeath", "0")) == "1")
-        for rx in reactions:
-            if isinstance(rx, dict) and rx.get("reactionmeddrapt"):
-                rows_3d.append({
-                    "Polypharmacy Category": cat,
-                    "Adverse Effect": str(rx.get("reactionmeddrapt")),
-                    "Death": is_d,
-                    "Reports": 1,
-                })
 
-    if not rows_3d:
+        for rx in reactions:
+            if isinstance(rx, dict):
+                effect = rx.get("reactionmeddrapt")
+                if effect:
+                    effect = str(effect)
+                    effect_totals[effect] += 1
+                    cell_counts[(cat, effect)][0] += 1
+                    cell_counts[(cat, effect)][1] += is_d
+
+    if not effect_totals:
         return pd.DataFrame(), []
 
-    df_3d_raw = pd.DataFrame(rows_3d)
-    top10_fx = (
-        df_3d_raw.groupby("Adverse Effect")["Reports"]
-        .sum()
-        .nlargest(10)
-        .index.tolist()
-    )
+    top10_fx = [effect for effect, _ in effect_totals.most_common(10)]
 
-    df_3d_filtered = df_3d_raw[df_3d_raw["Adverse Effect"].isin(top10_fx)].copy()
-    df_3d_agg = (
-        df_3d_filtered.groupby(["Polypharmacy Category", "Adverse Effect"], as_index=False)
-        .agg({"Reports": "sum", "Death": "sum"})
-    )
-    df_3d_agg["Death Percentage (%)"] = (df_3d_agg["Death"] / df_3d_agg["Reports"] * 100).round(2)
+    rows = []
+    for cat in config.POLY_ORDER:
+        for effect in top10_fx:
+            reports, deaths = cell_counts.get((cat, effect), (0, 0))
+            if reports:
+                rows.append({
+                    "Polypharmacy Category": cat,
+                    "Adverse Effect": effect,
+                    "Reports": reports,
+                    "Death": deaths,
+                    "Death Percentage (%)": round(deaths / reports * 100, 2),
+                })
+
+    if not rows:
+        return pd.DataFrame(), top10_fx
+
+    df_3d_agg = pd.DataFrame(rows)
     df_3d_agg["Polypharmacy Category"] = pd.Categorical(
-        df_3d_agg["Polypharmacy Category"], categories=config.POLY_ORDER, ordered=True
+        df_3d_agg["Polypharmacy Category"],
+        categories=config.POLY_ORDER,
+        ordered=True,
     )
     df_3d_agg["Adverse Effect"] = pd.Categorical(
-        df_3d_agg["Adverse Effect"], categories=top10_fx, ordered=True
+        df_3d_agg["Adverse Effect"],
+        categories=top10_fx,
+        ordered=True,
     )
-    df_3d_agg = df_3d_agg.sort_values(["Polypharmacy Category", "Reports"], ascending=[True, False]).reset_index(drop=True)
+    df_3d_agg = df_3d_agg.sort_values(
+        ["Polypharmacy Category", "Reports"],
+        ascending=[True, False],
+    ).reset_index(drop=True)
+
     return df_3d_agg, top10_fx

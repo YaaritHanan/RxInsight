@@ -176,9 +176,15 @@ if medicinalproduct:
     st.markdown("## 👤 Patient-Level Data & Statistics")
     pat_limit = st.slider(
         "Maximum patient-level reports to load:",
-        1000, config.PATIENT_MAX, config.PATIENT_DEFAULT_MAX, 1000,
+        1000, int(config.PATIENT_MAX), int(config.PATIENT_DEFAULT_MAX), 1000,
         key="pat_limit",
     )
+
+    if pat_limit >= 100_000:
+        st.caption(
+            "ℹ️ Large cohort mode: records are downloaded in pages and reduced "
+            "to only the fields required by RxInsight."
+        )
 
     if st.button("🔄 Refresh FDA patient data"):
         get_patient_reports.clear()
